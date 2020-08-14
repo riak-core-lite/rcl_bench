@@ -1,0 +1,12 @@
+{application, rcl_bench,
+ [{description, "Benchmarking framework"},
+  {vsn, "0.1.0"},
+  {mod, {rcl_bench_app, []}},
+  {applications,
+   [kernel,
+    stdlib,
+    crypto,
+    hackney
+   ]},
+  {licenses, ["Apache 2.0"]}
+ ]}.
