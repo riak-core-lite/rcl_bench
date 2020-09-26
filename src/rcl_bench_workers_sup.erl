@@ -18,9 +18,10 @@ stop_child(Id) ->
     ok = supervisor:delete_child(?MODULE, Id).
 
 init([]) ->
-    {ok, ConcurrentWorkers} = application:get_env(rcl_bench, concurrent),
+    {ok, DriverMod} = application:get_env(rcl_bench, driver_module),
+    {ok, ConcurrentWorkers} = DriverMod:concurrent_workers(),
     logger:notice("Concurrent workers: ~p", [ConcurrentWorkers]),
-    Workers = worker_specs(ConcurrentWorkers, []),
+    Workers = worker_specs(ConcurrentWorkers, DriverMod, []),
 
     SupFlags = #{strategy => one_for_all, intensity => 5, period => 10},
     {ok, {SupFlags, Workers}}.
@@ -29,15 +30,15 @@ init([]) ->
 %% Internal functions
 %% ===================================================================
 
-worker_specs(0, Acc) ->
+worker_specs(0, _DriverMod, Acc) ->
     Acc;
-worker_specs(Count, Acc) ->
+worker_specs(Count, DriverMod, Acc) ->
     Id = list_to_atom(lists:concat([rcl_bench_worker_, Count])),
     Spec =
         {Id,
-         {rcl_bench_worker, start_link, [Id, Count]},
+         {rcl_bench_worker, start_link, [Id, Count, DriverMod]},
          permanent,
          5000,
          worker,
          [rcl_bench_worker]},
-    worker_specs(Count - 1, [Spec | Acc]).
+    worker_specs(Count - 1, DriverMod, [Spec | Acc]).

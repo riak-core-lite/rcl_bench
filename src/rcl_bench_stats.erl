@@ -46,7 +46,8 @@ init([]) ->
     %% the start of the run
     ets:new(rcl_bench_total_errors, [protected, named_table]),
 
-    {ok, Operations} = application:get_env(rcl_bench, operations),
+    {ok, DriverMod} = application:get_env(rcl_bench, driver_module),
+    {ok, Operations} = DriverMod:operations(),
     %% Get the list of operations we'll be using for this test
     F1 =
         fun ({OpTag, _Count}) ->
@@ -57,7 +58,7 @@ init([]) ->
     Ops = [F1(X) || X <- Operations],
 
     logger:notice("Operations: ~p", [Ops]),
-    [erlang:put({csv_file, X}, op_csv_file(X)) || X <- Ops],
+    [erlang:put({csv_file, X}, op_csv_file(X, DriverMod)) || X <- Ops],
     {ok, #state{ops = Ops}}.
 
 handle_call({op, Op, {error, Reason}, _ElapsedUs}, _From, State) ->
@@ -89,8 +90,8 @@ code_change(_OldVsn, State, _Extra) ->
 %% Internal functions
 %% ====================================================================
 
-op_csv_file({Label, _Op}) ->
-    {ok, TestDir} = application:get_env(rcl_bench, current_dir),
+op_csv_file({Label, _Op}, DriverMod) ->
+    {ok, TestDir} = DriverMod:test_dir(),
     Fname = filename:join(TestDir, rcl_bench_util:normalize_label(Label) ++ "_single.csv"),
     {ok, F} = file:open(Fname, [raw, binary, write]),
     ok = file:write(F, <<"timestamp, unit, microseconds\n">>),

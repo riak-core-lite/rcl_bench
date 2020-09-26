@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2, run/1, stop/1]).
+-export([start_link/3, run/1, stop/1]).
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
          code_change/3]).
@@ -18,14 +18,15 @@
          ops_len,
          parent_pid,
          worker_pid,
-         sup_id}).
+         sup_id,
+         driver_mod}).
 
 %% ====================================================================
 %% API
 %% ====================================================================
 
-start_link(SupChild, Id) ->
-    gen_server:start_link(?MODULE, [SupChild, Id], []).
+start_link(SupChild, Id, DriverMod) ->
+    gen_server:start_link(?MODULE, [SupChild, Id, DriverMod], []).
 
 run(Pids) ->
     [ok = gen_server:call(Pid, run) || Pid <- Pids],
@@ -39,7 +40,7 @@ stop(Pids) ->
 %% gen_server callbacks
 %% ====================================================================
 
-init([SupChild, Id]) ->
+init([SupChild, Id, DriverMod]) ->
     %% Setup RNG seed for worker sub-process to use; incorporate the ID of
     %% the worker to ensure consistency in load-gen
     %%
@@ -50,13 +51,13 @@ init([SupChild, Id]) ->
     %% and value size generation between test runs.
     process_flag(trap_exit, true),
 
-    Ops = ops_tuple(),
-    ShutdownOnError = application:get_env(rcl_bench, shutdown_on_error, false),
+    Ops = ops_tuple(DriverMod),
+    ShutdownOnError = DriverMod:shutdown_on_error(),
 
     %% Finally, initialize key and value generation. We pass in our ID to the
     %% initialization to enable (optional) key/value space partitioning
-    {ok, KeyGenerator} = application:get_env(rcl_bench, key_generator),
-    {ok, ValueGenerator} = application:get_env(rcl_bench, value_generator),
+    {ok, KeyGenerator} = DriverMod:key_generator(),
+    {ok, ValueGenerator} = DriverMod:value_generator(),
     KeyGenFun = rcl_bench_keygen:new(KeyGenerator, Id),
     ValGenFun = rcl_bench_valgen:new(ValueGenerator, Id),
 
@@ -68,7 +69,8 @@ init([SupChild, Id]) ->
                ops = Ops,
                ops_len = size(Ops),
                parent_pid = self(),
-               sup_id = SupChild},
+               sup_id = SupChild,
+               driver_mod = DriverMod},
 
     %% Use a dedicated sub-process to do the actual work. The work loop may need
     %% to sleep or otherwise delay in a way that would be inappropriate and/or
@@ -78,10 +80,7 @@ init([SupChild, Id]) ->
     %%
     %% Link the worker and the sub-process to ensure that if either exits, the
     %% other goes with it.
-    WorkerPid =
-        spawn_link(fun () ->
-                           worker_init(State)
-                   end),
+    WorkerPid = spawn_link(fun () -> worker_init(State) end),
     WorkerPid ! {init_driver, self()},
     receive
       driver_ready ->
@@ -146,8 +145,8 @@ stop_worker(SupChild) ->
 %%
 %% Expand operations list into tuple suitable for weighted, random draw
 %%
-ops_tuple() ->
-    {ok, Operations} = application:get_env(rcl_bench, operations),
+ops_tuple(DriverMod) ->
+    {ok, Operations} = DriverMod:operations(),
     F =
         fun ({OpTag, Count}) ->
                 lists:duplicate(Count, {OpTag, OpTag});
@@ -163,8 +162,9 @@ worker_init(State) ->
     process_flag(trap_exit, true),
 
     Id = State#state.id,
-    {ok, Timestamp} = {ok, {A1, A2, A3}} = application:get_env(rcl_bench, random_seed),
-    {ok, Algorithm} = application:get_env(rcl_bench, random_algorithm),
+    DriverMod = State#state.driver_mod,
+    {ok, Timestamp} = {ok, {A1, A2, A3}} = DriverMod:random_seed(),
+    {ok, Algorithm} = DriverMod:random_algorithm(),
     RngSeed = {A1 + Id, A2 + Id, A3 + Id},
     rand:seed(Algorithm, RngSeed),
     logger:notice("Using seed ~p with ~p for worker ~p", [Timestamp, Algorithm, Id]),
@@ -172,10 +172,11 @@ worker_init(State) ->
     worker_idle_loop(State).
 
 worker_idle_loop(State) ->
+    DriverMod = State#state.driver_mod,
     receive
       {init_driver, Caller} ->
           %% Spin up the driver implementation
-          case catch rcl_bench_driver:new(State#state.id) of
+          case catch DriverMod:new(State#state.id) of
             {ok, DriverState} ->
                 Caller ! driver_ready,
                 ok;
@@ -185,7 +186,8 @@ worker_idle_loop(State) ->
           end,
           worker_idle_loop(State#state{driver_state = DriverState});
       run ->
-          {ok, Mode} = application:get_env(rcl_bench, mode),
+          DriverMod = State#state.driver_mod,
+          {ok, Mode} = DriverMod:mode(),
           case Mode of
             {rate, max} ->
                 logger:notice("Starting max worker: ~p", [self()]),
@@ -200,12 +202,14 @@ worker_idle_loop(State) ->
     end.
 
 worker_next_op2(State, OpTag) ->
-    catch rcl_bench_driver:run(OpTag,
+    DriverMod = State#state.driver_mod,
+    catch DriverMod:run(OpTag,
                                State#state.keygen,
                                State#state.valgen,
                                State#state.driver_state).
 
 worker_next_op(State) ->
+    DriverMod = State#state.driver_mod,
     Next = element(rand:uniform(State#state.ops_len), State#state.ops),
     {_Label, OpTag} = Next,
     Start = os:timestamp(),
@@ -229,7 +233,7 @@ worker_next_op(State) ->
           rcl_bench_stats:op_complete(Next, {error, crash}, ElapsedUs),
 
           %% Give the driver a chance to cleanup
-          catch rcl_bench_driver:terminate({'EXIT', Reason}, State#state.driver_state),
+          catch DriverMod:terminate({'EXIT', Reason}, State#state.driver_state),
 
           logger:warning("Driver crashed: ~p", [Reason]),
           case State#state.shutdown_on_error of
@@ -241,18 +245,19 @@ worker_next_op(State) ->
       {stop, Reason} ->
           logger:notice("Driver (~p) has requested stop: ~p", [self(), Reason]),
           %% Give the driver a chance to cleanup
-          catch rcl_bench_driver:terminate(normal, State#state.driver_state),
+          catch DriverMod:terminate(normal, State#state.driver_state),
           normal
     end.
 
 needs_shutdown(State) ->
+    DriverMod = State#state.driver_mod,
     Parent = State#state.parent_pid,
     receive
       {'EXIT', Pid, _Reason} ->
           case Pid of
             Parent ->
                 %% Give the driver a chance to cleanup
-                catch rcl_bench_driver:terminate(normal, State#state.driver_state),
+                catch DriverMod:terminate(normal, State#state.driver_state),
                 true;
             _Else ->
                 %% catch this so that selective receive doesn't kill us

@@ -2,4 +2,4 @@
 -name runner@127.0.0.1
 
 ## Cookie for distributed erlang
--setcookie rclref-cookie
+-setcookie rcl-bench-cookie

@@ -1,75 +1,60 @@
 -module(rcl_bench_driver).
+-export([mode/0, concurrent_workers/0, duration/0, operations/0, test_dir/0,
+         key_generator/0, value_generator/0, random_algorithm/0,
+         random_seed/0, shutdown_on_error/0]).
 
--export([new/1, run/4, terminate/2]).
+-type state() :: term().
+-type command() :: term().
+-type keygen() :: term().
+-type valuegen() :: term().
+-type error() :: {error, term()}.
 
--record(state, {node, url, existing = [], http_existing = []}).
+-type mode_config() :: term().
+-type key_generator_config() :: term().
+-type value_generator_config() :: term().
+-type random_algorithm_config() :: term().
+-type random_seed_value() :: term().
 
-%% ====================================================================
-%% API
-%% ====================================================================
+-callback new(term()) -> {ok, state()}.
+-callback run(command(), keygen(), valuegen(), state()) -> {ok, state()} | error().
+-callback terminate(term(), state()) -> ok.
 
-new(_Id) ->
-    logger:notice("(~p) Initializing driver ~p", [node(), _Id]),
-    {ok, Ip} = application:get_env(rcl_bench, ip),
-    {ok, Port} = application:get_env(rcl_bench, port),
-    Node = list_to_atom("rclref@" ++ atom_to_list(Ip)),
-    Url = "http://" ++ atom_to_list(Ip) ++ ":" ++ integer_to_list(Port) ++ "/rclref/",
+-callback mode() -> {ok, mode_config()}.
+-callback concurrent_workers() -> {ok, pos_integer()}.
+-callback duration() -> {ok, pos_integer()}.
+-callback operations() -> {ok, [{command(), pos_integer()}]}.
+-callback test_dir() -> {ok, nonempty_string()}.
+-callback key_generator() -> {ok, key_generator_config()}.
+-callback value_generator() -> {ok, value_generator_config()}.
+-callback random_algorithm() -> {ok, random_algorithm_config()}.
+-callback random_seed() -> {ok, random_seed_value()}.
+-callback shutdown_on_error() -> boolean().
 
-    {ok, #state{node = Node, url = Url}}.
+% default implementations to reuse in drivers
 
-run(get, KeyGen, _ValueGen, #state{node = Node} = State) ->
-    Key = KeyGen(),
-    {_, _} = rpc:call(Node, rclref_client, get, [Key]),
-    {ok, State};
-run(put, KeyGen, ValueGen, #state{existing = Existing, node = Node} = State) ->
-    Key = KeyGen(),
-    Value = ValueGen(),
-    ok = rpc:call(Node, rclref_client, put, [Key, Value]),
-    {ok, State#state{existing = Existing ++ [Key]}};
-run(get_own_puts, _, _, #state{existing = []} = State) ->
-    {ok, State};
-run(get_own_puts, _KeyGen, _ValueGen, #state{existing = Existing, node = Node} = State) ->
-    Max = length(Existing),
-    Take = rand:uniform(Max),
-    Key = lists:nth(Take, Existing),
-    {ok, _} = rpc:call(Node, rclref_client, get, [Key]),
-    {ok, State};
-run(http_get, KeyGen, _ValueGen, #state{url = Url} = State) ->
-    Key = KeyGen(),
-    Url0 = list_to_binary(Url ++ integer_to_list(Key)),
-    {ok, _, _, ClientRef} = hackney:request(get, Url0, [], <<>>, []),
-    {ok, _} = hackney:body(ClientRef),
-    {ok, State};
-run(http_get_own_puts, _, _, #state{http_existing = []} = State) ->
-    {ok, State};
-run(http_get_own_puts,
-    _KeyGen,
-    _ValueGen,
-    #state{url = Url, http_existing = Existing} = State) ->
-    Max = length(Existing),
-    Take = rand:uniform(Max),
-    Key = lists:nth(Take, Existing),
-    Url0 = list_to_binary(Url ++ integer_to_list(Key)),
-    {ok, 200, _, ClientRef} = hackney:request(get, Url0, [], <<>>, []),
-    {ok, _} = hackney:body(ClientRef),
-    {ok, State};
-run(http_put, KeyGen, ValueGen, #state{http_existing = Existing, url = Url} = State) ->
-    Key = KeyGen(),
-    Val = ValueGen(),
+mode() -> {ok, {rate, max}}.
+%% Number of concurrent workers
+concurrent_workers() -> {ok, 2}.
+%% Test duration (minutes)
+duration() -> {ok, 1}.
+%% Operations (and associated mix)
+operations() ->
+    {ok, [{get_own_puts, 3}, 
+          {put, 10}, 
+          {get, 2}]}.
 
-    Url0 = list_to_binary(Url ++ integer_to_list(Key)),
+%% Base test output directory
+test_dir() -> {ok, "tests"}.
 
-    {ok, 200, _, ClientRef} = hackney:request(post, Url0, [], Val, []),
-    {ok, _} = hackney:body(ClientRef),
 
-    {ok, State#state{http_existing = Existing ++ [Key]}};
-run(error, KeyGen, _ValueGen, State) ->
-    _Key = KeyGen(),
-    {error, went_wrong, State};
-run(driver_error, KeyGen, _ValueGen, State) ->
-    Key = KeyGen(),
-    Key = 42,
-    {error, went_wrong, State}.
+%% Key generators
+%% {uniform_int, N} - Choose a uniformly distributed integer between 0 and N
+key_generator() -> {ok, {uniform_int, 100000}}.
 
-terminate(_Reason, _B) ->
-    ok.
+%% Value generators
+%% {fixed_bin, N} - Fixed size binary blob of N bytes
+value_generator() -> {ok, {fixed_bin, 100}}.
+
+random_algorithm() -> {ok, exsss}.
+random_seed() -> {ok, {1,4,3}}.
+shutdown_on_error() -> false.
