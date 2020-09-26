@@ -1,5 +1,5 @@
 {application, rcl_bench,
- [{description, "Benchmarking framework"},
+ [{description, "Riak Core Lite Benchmarking Framework"},
   {vsn, "0.1.0"},
   {mod, {rcl_bench_app, []}},
   {applications,
@@ -8,5 +8,6 @@
     crypto,
     hackney
    ]},
-  {licenses, ["Apache 2.0"]}
+  {licenses, ["Apache 2.0"]},
+  {links, [{"Github", "https://github.com/riak-core-lite/rcl_bench"}]}
  ]}.
