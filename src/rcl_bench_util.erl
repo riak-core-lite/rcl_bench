@@ -9,10 +9,10 @@
 user_friendly_bytes(Size) ->
     lists:foldl(fun (Desc, {Sz, SzDesc}) ->
                         case Sz > 1000 of
-                          true ->
-                              {Sz / 1024, Desc};
-                          false ->
-                              {Sz, SzDesc}
+                            true ->
+                                {Sz / 1024, Desc};
+                            false ->
+                                {Sz, SzDesc}
                         end
                 end,
                 {Size, bytes},
@@ -40,7 +40,7 @@ normalize_label(Label) when is_tuple(Label) ->
 
 replace_special_chars([H | T])
     when H >= $0 andalso H =< $9 orelse
-           H >= $A andalso H =< $Z orelse H >= $a andalso H =< $z ->
+             H >= $A andalso H =< $Z orelse H >= $a andalso H =< $z ->
     [H | replace_special_chars(T)];
 replace_special_chars([_ | T]) ->
     [$- | replace_special_chars(T)];

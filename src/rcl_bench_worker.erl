@@ -80,11 +80,14 @@ init([SupChild, Id, DriverMod]) ->
     %%
     %% Link the worker and the sub-process to ensure that if either exits, the
     %% other goes with it.
-    WorkerPid = spawn_link(fun () -> worker_init(State) end),
+    WorkerPid =
+        spawn_link(fun () ->
+                           worker_init(State)
+                   end),
     WorkerPid ! {init_driver, self()},
     receive
-      driver_ready ->
-          ok
+        driver_ready ->
+            ok
     end,
 
     %% start
@@ -102,18 +105,18 @@ handle_cast(run, State) ->
 
 handle_info({'EXIT', Pid, Reason}, State) ->
     case Reason of
-      normal ->
-          %% Clean shutdown of the worker; spawn a process to terminate this
-          %% process via the supervisor API and make sure it doesn't restart.
-          spawn(fun () ->
-                        stop_worker(State#state.sup_id)
-                end),
-          {noreply, State};
-      _ ->
-          logger:error("Worker ~p exited with ~p", [Pid, Reason]),
-          %% Worker process exited for some other reason; stop this process
-          %% as well so that everything gets restarted by the sup
-          {stop, normal, State}
+        normal ->
+            %% Clean shutdown of the worker; spawn a process to terminate this
+            %% process via the supervisor API and make sure it doesn't restart.
+            spawn(fun () ->
+                          stop_worker(State#state.sup_id)
+                  end),
+            {noreply, State};
+        _ ->
+            logger:error("Worker ~p exited with ~p", [Pid, Reason]),
+            %% Worker process exited for some other reason; stop this process
+            %% as well so that everything gets restarted by the sup
+            {stop, normal, State}
     end.
 
 terminate(_Reason, _State) ->
@@ -135,11 +138,11 @@ code_change(_OldVsn, State, _Extra) ->
 stop_worker(SupChild) ->
     ok = rcl_bench_workers_sup:stop_child(SupChild),
     case rcl_bench_workers_sup:workers() of
-      [] ->
-          %% No more workers -- stop the system
-          rcl_bench_util:exit("Stopping the system", []);
-      _ ->
-          ok
+        [] ->
+            %% No more workers -- stop the system
+            rcl_bench_util:exit("Stopping the system", []);
+        _ ->
+            ok
     end.
 
 %%
@@ -174,39 +177,40 @@ worker_init(State) ->
 worker_idle_loop(State) ->
     DriverMod = State#state.driver_mod,
     receive
-      {init_driver, Caller} ->
-          %% Spin up the driver implementation
-          case catch DriverMod:new(State#state.id) of
-            {ok, DriverState} ->
-                Caller ! driver_ready,
-                ok;
-            Error ->
-                DriverState = undefined, % Make erlc happy
-                rcl_bench_util:exit("Failed to initialize driver: ~p", [Error])
-          end,
-          worker_idle_loop(State#state{driver_state = DriverState});
-      run ->
-          DriverMod = State#state.driver_mod,
-          {ok, Mode} = DriverMod:mode(),
-          case Mode of
-            {rate, max} ->
-                logger:notice("Starting max worker: ~p", [self()]),
-                max_worker_run_loop(State);
-            {rate, Rate} ->
-                %% Calculate mean inter-arrival time in in milliseconds. A
-                %% fixed rate worker can generate (at max) only 1k req/sec.
-                MeanArrival = 1000 / Rate,
-                logger:notice("Starting ~w ms/req fixed rate worker: ~p", [MeanArrival, self()]),
-                rate_worker_run_loop(State, 1 / MeanArrival)
-          end
+        {init_driver, Caller} ->
+            %% Spin up the driver implementation
+            case catch DriverMod:new(State#state.id) of
+                {ok, DriverState} ->
+                    Caller ! driver_ready,
+                    ok;
+                Error ->
+                    DriverState = undefined, % Make erlc happy
+                    rcl_bench_util:exit("Failed to initialize driver: ~p", [Error])
+            end,
+            worker_idle_loop(State#state{driver_state = DriverState});
+        run ->
+            DriverMod = State#state.driver_mod,
+            {ok, Mode} = DriverMod:mode(),
+            case Mode of
+                {rate, max} ->
+                    logger:notice("Starting max worker: ~p", [self()]),
+                    max_worker_run_loop(State);
+                {rate, Rate} ->
+                    %% Calculate mean inter-arrival time in in milliseconds. A
+                    %% fixed rate worker can generate (at max) only 1k req/sec.
+                    MeanArrival = 1000 / Rate,
+                    logger:notice("Starting ~w ms/req fixed rate worker: ~p",
+                                  [MeanArrival, self()]),
+                    rate_worker_run_loop(State, 1 / MeanArrival)
+            end
     end.
 
 worker_next_op2(State, OpTag) ->
     DriverMod = State#state.driver_mod,
     catch DriverMod:run(OpTag,
-                               State#state.keygen,
-                               State#state.valgen,
-                               State#state.driver_state).
+                        State#state.keygen,
+                        State#state.valgen,
+                        State#state.driver_state).
 
 worker_next_op(State) ->
     DriverMod = State#state.driver_mod,
@@ -216,68 +220,69 @@ worker_next_op(State) ->
     Result = worker_next_op2(State, OpTag),
     ElapsedUs = erlang:max(0, timer:now_diff(os:timestamp(), Start)),
     case Result of
-      {Res, DriverState} when Res == ok orelse element(1, Res) == ok ->
-          rcl_bench_stats:op_complete(Next, Res, ElapsedUs),
-          {ok, State#state{driver_state = DriverState}};
-      {Res, DriverState} when Res == silent orelse element(1, Res) == silent ->
-          {ok, State#state{driver_state = DriverState}};
-      {error, Reason, DriverState} ->
-          logger:warning("Driver encountered error"),
-          %% Driver encountered a recoverable error
-          rcl_bench_stats:op_complete(Next, {error, Reason}, ElapsedUs),
-          State#state.shutdown_on_error andalso rcl_bench_util:exit("(~p) shutdown on error", [1]),
-          {ok, State#state{driver_state = DriverState}};
-      {'EXIT', Reason} ->
-          %% Driver crashed, generate a crash error and terminate. This will take down
-          %% the corresponding worker which will get restarted by the appropriate supervisor.
-          rcl_bench_stats:op_complete(Next, {error, crash}, ElapsedUs),
+        {Res, DriverState} when Res == ok orelse element(1, Res) == ok ->
+            rcl_bench_stats:op_complete(Next, Res, ElapsedUs),
+            {ok, State#state{driver_state = DriverState}};
+        {Res, DriverState} when Res == silent orelse element(1, Res) == silent ->
+            {ok, State#state{driver_state = DriverState}};
+        {error, Reason, DriverState} ->
+            logger:warning("Driver encountered error"),
+            %% Driver encountered a recoverable error
+            rcl_bench_stats:op_complete(Next, {error, Reason}, ElapsedUs),
+            State#state.shutdown_on_error andalso
+                rcl_bench_util:exit("(~p) shutdown on error", [1]),
+            {ok, State#state{driver_state = DriverState}};
+        {'EXIT', Reason} ->
+            %% Driver crashed, generate a crash error and terminate. This will take down
+            %% the corresponding worker which will get restarted by the appropriate supervisor.
+            rcl_bench_stats:op_complete(Next, {error, crash}, ElapsedUs),
 
-          %% Give the driver a chance to cleanup
-          catch DriverMod:terminate({'EXIT', Reason}, State#state.driver_state),
+            %% Give the driver a chance to cleanup
+            catch DriverMod:terminate({'EXIT', Reason}, State#state.driver_state),
 
-          logger:warning("Driver crashed: ~p", [Reason]),
-          case State#state.shutdown_on_error of
-            true ->
-                rcl_bench_util:exit("(~p) shutdown on error", [2]);
-            false ->
-                crash
-          end;
-      {stop, Reason} ->
-          logger:notice("Driver (~p) has requested stop: ~p", [self(), Reason]),
-          %% Give the driver a chance to cleanup
-          catch DriverMod:terminate(normal, State#state.driver_state),
-          normal
+            logger:warning("Driver crashed: ~p", [Reason]),
+            case State#state.shutdown_on_error of
+                true ->
+                    rcl_bench_util:exit("(~p) shutdown on error", [2]);
+                false ->
+                    crash
+            end;
+        {stop, Reason} ->
+            logger:notice("Driver (~p) has requested stop: ~p", [self(), Reason]),
+            %% Give the driver a chance to cleanup
+            catch DriverMod:terminate(normal, State#state.driver_state),
+            normal
     end.
 
 needs_shutdown(State) ->
     DriverMod = State#state.driver_mod,
     Parent = State#state.parent_pid,
     receive
-      {'EXIT', Pid, _Reason} ->
-          case Pid of
-            Parent ->
-                %% Give the driver a chance to cleanup
-                catch DriverMod:terminate(normal, State#state.driver_state),
-                true;
-            _Else ->
-                %% catch this so that selective receive doesn't kill us
-                false
-          end
-      after 0 ->
-                false
+        {'EXIT', Pid, _Reason} ->
+            case Pid of
+                Parent ->
+                    %% Give the driver a chance to cleanup
+                    catch DriverMod:terminate(normal, State#state.driver_state),
+                    true;
+                _Else ->
+                    %% catch this so that selective receive doesn't kill us
+                    false
+            end
+        after 0 ->
+                  false
     end.
 
 max_worker_run_loop(State) ->
     case worker_next_op(State) of
-      {ok, State2} ->
-          case needs_shutdown(State2) of
-            true ->
-                ok;
-            false ->
-                max_worker_run_loop(State2)
-          end;
-      ExitReason ->
-          exit(ExitReason)
+        {ok, State2} ->
+            case needs_shutdown(State2) of
+                true ->
+                    ok;
+                false ->
+                    max_worker_run_loop(State2)
+            end;
+        ExitReason ->
+            exit(ExitReason)
     end.
 
 rate_worker_run_loop(State, Lambda) ->
@@ -285,13 +290,13 @@ rate_worker_run_loop(State, Lambda) ->
     %% queue.
     timer:sleep(trunc(rcl_bench_stats:exponential(Lambda))),
     case worker_next_op(State) of
-      {ok, State2} ->
-          case needs_shutdown(State2) of
-            true ->
-                ok;
-            false ->
-                rate_worker_run_loop(State2, Lambda)
-          end;
-      ExitReason ->
-          exit(ExitReason)
+        {ok, State2} ->
+            case needs_shutdown(State2) of
+                true ->
+                    ok;
+                false ->
+                    rate_worker_run_loop(State2, Lambda)
+            end;
+        ExitReason ->
+            exit(ExitReason)
     end.

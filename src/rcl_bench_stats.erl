@@ -104,37 +104,37 @@ ets_increment(Tab, Key, Incr) when is_integer(Incr) ->
     %% Increment the counter for this specific key. We have to deal with
     %% missing keys, so catch the update if it fails and init as necessary
     case catch ets:update_counter(Tab, Key, Incr) of
-      Value when is_integer(Value) ->
-          ok;
-      {'EXIT', _} ->
-          case ets:insert_new(Tab, {Key, Incr}) of
-            true ->
-                ok;
-            _ ->
-                %% Race with another load gen proc, so retry
-                ets_increment(Tab, Key, Incr)
-          end
+        Value when is_integer(Value) ->
+            ok;
+        {'EXIT', _} ->
+            case ets:insert_new(Tab, {Key, Incr}) of
+                true ->
+                    ok;
+                _ ->
+                    %% Race with another load gen proc, so retry
+                    ets_increment(Tab, Key, Incr)
+            end
     end;
 ets_increment(Tab, Key, Incr) when is_float(Incr) ->
     Old =
         case ets:lookup(Tab, Key) of
-          [{_, Val}] ->
-              Val;
-          [] ->
-              0
+            [{_, Val}] ->
+                Val;
+            [] ->
+                0
         end,
     true = ets:insert(Tab, {Key, Old + Incr}).
 
 report_total_errors(State) ->
     case ets:tab2list(rcl_bench_errors) of
-      [] ->
-          logger:notice("No Errors");
-      UnsortedErrCounts ->
-          ErrCounts = lists:sort(UnsortedErrCounts),
-          F =
-              fun ({Key, _Count}) ->
-                      lists:member(Key, State#state.ops)
-              end,
-          ErrorSummary = lists:filter(F, ErrCounts),
-          logger:notice("Total Errors: ~p", [ErrorSummary])
+        [] ->
+            logger:notice("No Errors");
+        UnsortedErrCounts ->
+            ErrCounts = lists:sort(UnsortedErrCounts),
+            F =
+                fun ({Key, _Count}) ->
+                        lists:member(Key, State#state.ops)
+                end,
+            ErrorSummary = lists:filter(F, ErrCounts),
+            logger:notice("Total Errors: ~p", [ErrorSummary])
     end.

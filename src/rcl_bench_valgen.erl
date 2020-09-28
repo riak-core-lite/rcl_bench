@@ -38,10 +38,10 @@ new({uniform_bin, MinSize, MaxSize}, Id)
 new({function, Module, Function, Args}, Id)
     when is_atom(Module), is_atom(Function), is_list(Args) ->
     case code:ensure_loaded(Module) of
-      {module, Module} ->
-          erlang:apply(Module, Function, [Id] ++ Args);
-      _Error ->
-          rcl_bench_util:exit("Could not find valgen function: ~p:~p\n", [Module, Function])
+        {module, Module} ->
+            erlang:apply(Module, Function, [Id] ++ Args);
+        _Error ->
+            rcl_bench_util:exit("Could not find valgen function: ~p:~p\n", [Module, Function])
     end;
 new({uniform_int, MaxVal}, _Id) when is_integer(MaxVal), MaxVal >= 1 ->
     fun () ->
@@ -74,11 +74,11 @@ init_source(_Id, Path) ->
 
 data_block({SourceCfg, SourceSz, Source}, BlockSize) ->
     case SourceSz - BlockSize > 0 of
-      true ->
-          Offset = rand:uniform(SourceSz - BlockSize),
-          <<_:Offset/bytes, Slice:BlockSize/bytes, _Rest/binary>> = Source,
-          Slice;
-      false ->
-          logger:warning("~p is too small ~p < ~p", [SourceCfg, SourceSz, BlockSize]),
-          Source
+        true ->
+            Offset = rand:uniform(SourceSz - BlockSize),
+            <<_:Offset/bytes, Slice:BlockSize/bytes, _Rest/binary>> = Source,
+            Slice;
+        false ->
+            logger:warning("~p is too small ~p < ~p", [SourceCfg, SourceSz, BlockSize]),
+            Source
     end.

@@ -17,43 +17,43 @@ new({biased_partial, MaxKey, ReplicationFactor, PercentageExternal, NumDcs, IdDc
     RangeHere = ReplicationFactor,
     MinHere =
         case IdDc - (ReplicationFactor - 1) of
-          Val when Val < 1 ->
-              NumDcs - Val;
-          Val2 ->
-              Val2
+            Val when Val < 1 ->
+                NumDcs - Val;
+            Val2 ->
+                Val2
         end,
     MinNotHere =
         case (IdDc + 1) rem NumDcs of
-          0 ->
-              NumDcs;
-          Oth ->
-              Oth
+            0 ->
+                NumDcs;
+            Oth ->
+                Oth
         end,
 
     RangeNotHere =
         case NumDcs - ReplicationFactor of
-          0 ->
-              1;
-          Oth2 ->
-              Oth2
+            0 ->
+                1;
+            Oth2 ->
+                Oth2
         end,
     fun () ->
             DcNum =
                 case rand:uniform() > PercentageExternal of
-                  false ->
-                      case (MinNotHere + (rand:uniform(RangeNotHere) - 1)) rem NumDcs of
-                        0 ->
-                            NumDcs;
-                        Other ->
-                            Other
-                      end;
-                  true ->
-                      case (MinHere + (rand:uniform(RangeHere) - 1)) rem NumDcs of
-                        0 ->
-                            NumDcs;
-                        Other ->
-                            Other
-                      end
+                    false ->
+                        case (MinNotHere + (rand:uniform(RangeNotHere) - 1)) rem NumDcs of
+                            0 ->
+                                NumDcs;
+                            Other ->
+                                Other
+                        end;
+                    true ->
+                        case (MinHere + (rand:uniform(RangeHere) - 1)) rem NumDcs of
+                            0 ->
+                                NumDcs;
+                            Other ->
+                                Other
+                        end
                 end,
             rand:uniform(KeySpace) * NumDcs + DcNum
     end;

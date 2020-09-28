@@ -1,5 +1,5 @@
 BASEDIR = $(shell pwd)
-REBAR = ./rebar3
+REBAR = rebar3
 
 all: compile
 
