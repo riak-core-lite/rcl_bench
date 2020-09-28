@@ -1,27 +1,26 @@
-rcl_bench
-=====
+# Riak Core Lite Bench
 
-Simplification of `basho_bench`
+Simplification of `basho_bench` to be used by Riak Core Lite applications
 
+# Generate Graphs
 
-1. Adjust Configuration
------
+```
+# ./R/latency.R <op> <csv-path> <image-path>
+./R/latency.R put tests/put_single.csv latency_put_single.png
 
-    config/sys.config
-    config/vm.args
+# ./R/throughput.R <op> <csv-path> <image-path>
+./R/throughput.R put tests/put_single.csv throughput_put_single.png
+```
 
-Optional:
-  
-   * Implement more operations in `rcl_bench_driver.erl`
+To install R and ggplot2 on ubuntu:
 
+```
+sudo apt install r-base
 
-2. Run Benchmark
------
+R
 
-    make run
-
-
-3. Generate Graphs
------
-
-Change into the `R` directory. Change the operation you want to make a graph of in the file. Execute the R script.
+> install.packages("ggplot2")
+> install.packages("dplyr")
+> install.packages("scales")
+> install.packages("lubridate")
+```

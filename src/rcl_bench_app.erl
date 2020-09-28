@@ -15,8 +15,9 @@ start(_StartType, _StartArgs) ->
 
     log_dimensions(),
 
+    {ok, DriverMod} = application:get_env(rcl_bench, driver_module),
     % spawn duration exit
-    {ok, DurationMins} = application:get_env(rcl_bench, duration),
+    {ok, DurationMins} = DriverMod:duration(),
     Duration = timer:minutes(DurationMins) + timer:seconds(1),
     spawn_link(fun () ->
                        receive
@@ -51,13 +52,14 @@ prepare_test_dir() ->
     TestDir.
 
 log_dimensions() ->
-    {ok, KeyGenerator} = application:get_env(rcl_bench, key_generator),
+    {ok, DriverMod} = application:get_env(rcl_bench, driver_module),
+    {ok, KeyGenerator} = DriverMod:key_generator(),
     case rcl_bench_keygen:dimension(KeyGenerator) of
       undefined ->
           logger:notice("No dimensions for ~p", [KeyGenerator]),
           ok;
       Keyspace ->
-          {ok, ValueGenerator} = application:get_env(rcl_bench, value_generator),
+          {ok, ValueGenerator} = DriverMod:value_generator(),
           ValueSpace = rcl_bench_valgen:dimension(ValueGenerator, Keyspace),
           {Size, Desc} = rcl_bench_util:user_friendly_bytes(ValueSpace),
           logger:notice("(~p, ~p) Estimated data size: ~.2f ~p",
