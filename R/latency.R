@@ -1,8 +1,9 @@
 #!/usr/bin/env Rscript
 library(ggplot2)
 
-title <- "put"
-d <- read.csv(paste("../current/",title,"_single.csv", sep=""))
+args <- commandArgs(TRUE)
+title <- args[1]
+d <- read.csv(paste("../current/",title,".csv", sep=""))
 
 d$timestamp <- d$timestamp / 1000
 d$timestamp <- as.POSIXct(d$timestamp, origin="1970-01-01")
