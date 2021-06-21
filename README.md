@@ -24,3 +24,16 @@ R
 > install.packages("scales")
 > install.packages("lubridate")
 ```
+
+
+
+## Get Started
+
+1. Copy `examples/print_ops_driver.erl` to `src/`. Rename if wanted.
+2. Set `name` and `cookie` in `config/vm.args`
+3. Uncomment `driver_module` configuration in `sys.config` and rename
+   `my_driver` to your driver module
+4. `make run` should start a dummy benchmark where the operations are printed to
+   console
+5. Implement the dummy driver operations or add news ones
+6. Configure driver parameter 

@@ -29,20 +29,27 @@
 -callback random_seed() -> {ok, random_seed_value()}.
 -callback shutdown_on_error() -> boolean().
 
-% default implementations to reuse in drivers
-
+%% {ok, {rate, integer() | max}}: 
+%% How often a thread should send a request. 
+%% Use 'max' for benchmarking.
+%% If you are debugging, maybe {rate, N} can be useful, 
+%% which means each thread sends N requests per second.
 mode() ->
     {ok, {rate, max}}.
 
-%% Number of concurrent workers
+%% Number of concurrent worker threads
+%% This has to be carefully chosen. 
+%% Too few threads will not exploit the real throughput of the system, 
+%% while too high concurrency will over-stress the system and trigger timeouts. 
 concurrent_workers() ->
     {ok, 2}.
 
-%% Test duration (minutes)
+%% Test duration in minutes
 duration() ->
     {ok, 1}.
 
-%% Operations (and associated mix)
+%% Available operations and associated mix
+%% Every operation command has to be implemented in the driver as a run callback
 operations() ->
     {ok, [{get_own_puts, 3}, {put, 10}, {get, 2}]}.
 
@@ -60,9 +67,13 @@ key_generator() ->
 value_generator() ->
     {ok, {fixed_bin, 100}}.
 
+%% Which random algorithm to use
+%% See https://erlang.org/doc/man/rand.html
 random_algorithm() ->
     {ok, exsss}.
 
+%% Seed guarantees that the random values are generated in the same order across 
+%% different runs for reproducability
 random_seed() ->
     {ok, {1, 4, 3}}.
 
