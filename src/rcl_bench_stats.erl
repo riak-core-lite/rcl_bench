@@ -114,16 +114,7 @@ ets_increment(Tab, Key, Incr) when is_integer(Incr) ->
                     %% Race with another load gen proc, so retry
                     ets_increment(Tab, Key, Incr)
             end
-    end;
-ets_increment(Tab, Key, Incr) when is_float(Incr) ->
-    Old =
-        case ets:lookup(Tab, Key) of
-            [{_, Val}] ->
-                Val;
-            [] ->
-                0
-        end,
-    true = ets:insert(Tab, {Key, Old + Incr}).
+    end.
 
 report_total_errors(State) ->
     case ets:tab2list(rcl_bench_errors) of
