@@ -38,3 +38,8 @@ R
 5. Implement the dummy driver operations or add news ones
 6. Erlang dependencies can be added to `rebar.config` and to `rcl_bench.app.src`, e.g. a client to connect to your application
 7. Configure driver parameters and benchmark your application
+
+## Sample Implementations
+
+1. [Antidote Benchmarks](https://github.com/albsch/antidote_bench)
+2. [RclRef Benchmarks](https://github.com/wattlebirdaz/rcl_bench)
