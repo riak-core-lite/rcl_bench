@@ -226,7 +226,7 @@ worker_next_op(State) ->
         {Res, DriverState} when Res == silent orelse element(1, Res) == silent ->
             {ok, State#state{driver_state = DriverState}};
         {error, Reason, DriverState} ->
-            logger:warning("Driver encountered error"),
+            logger:warning("Error: ~p", [Reason]),
             %% Driver encountered a recoverable error
             rcl_bench_stats:op_complete(Next, {error, Reason}, ElapsedUs),
             State#state.shutdown_on_error andalso

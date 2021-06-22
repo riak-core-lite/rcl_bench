@@ -1,6 +1,8 @@
 -module(rkv_driver).
 -behaviour(rcl_bench_driver).
 
+% dependencies: hackney
+
 -export([new/1, run/4, terminate/2]).
 
 -export([mode/0, concurrent_workers/0, duration/0, operations/0, test_dir/0,

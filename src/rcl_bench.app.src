@@ -5,8 +5,7 @@
   {applications,
    [kernel,
     stdlib,
-    crypto,
-    hackney
+    crypto
    ]},
   {licenses, ["Apache 2.0"]},
   {links, [{"Github", "https://github.com/riak-core-lite/rcl_bench"}]}
