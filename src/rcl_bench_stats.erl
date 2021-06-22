@@ -62,7 +62,6 @@ init([]) ->
     {ok, #state{ops = Ops}}.
 
 handle_call({op, Op, {error, Reason}, _ElapsedUs}, _From, State) ->
-    logger:notice("Error!"),
     increment_error_counter(Op),
     increment_error_counter({Op, Reason}),
     {reply, ok, State};
@@ -91,7 +90,8 @@ code_change(_OldVsn, State, _Extra) ->
 %% ====================================================================
 
 op_csv_file({Label, _Op}, DriverMod) ->
-    {ok, TestDir} = DriverMod:test_dir(),
+    {ok, TestDir2} = DriverMod:test_dir(),
+    TestDir = filename:join(TestDir2, "current"),
     Fname = filename:join(TestDir, rcl_bench_util:normalize_label(Label) ++ "_single.csv"),
     {ok, F} = file:open(Fname, [raw, binary, write]),
     ok = file:write(F, <<"timestamp, unit, microseconds\n">>),
