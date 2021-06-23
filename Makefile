@@ -23,3 +23,6 @@ rel:
 
 run: rel
 	_build/default/rel/rcl_bench/bin/rcl_bench foreground
+
+results: rel
+	R/summary.r
