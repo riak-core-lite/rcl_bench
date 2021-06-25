@@ -237,7 +237,7 @@ worker_next_op(State) ->
 
             %% Driver crashed, generate a crash error and terminate. This will take down
             %% the corresponding worker which will get restarted by the appropriate supervisor.
-            rcl_bench_stats:op_complete(Next, {error, Reason}, ElapsedUs),
+            rcl_bench_stats:op_complete(Next, {error, {crash, Reason}}, ElapsedUs),
 
             %% Give the driver a chance to cleanup
             catch DriverMod:terminate({'EXIT', Reason}, State#state.driver_state),
