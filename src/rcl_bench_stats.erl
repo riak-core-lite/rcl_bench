@@ -162,19 +162,6 @@ op_csv_file({Label, _Op}, DriverMod) ->
     ok = file:write(F, <<"timestamp, unit, microseconds\n">>),
     F.
 
-increment_error_counter(Key) ->
-    ets:update_counter(rcl_bench_errors, Key, [{2,1}], {Key, 0}).
-
-report_total_errors(State) ->
-    case ets:tab2list(rcl_bench_errors) of
-        [] ->
-            logger:notice("No Errors");
-        UnsortedErrCounts ->
-            ErrCounts = lists:sort(UnsortedErrCounts),
-            F =
-                fun ({Key, _Count}) ->
-                        lists:member(Key, State#state.ops)
-                end,
-            ErrorSummary = lists:filter(F, ErrCounts),
-            logger:notice("Total Errors: ~p", [ErrorSummary])
-    end.
+report_total_errors(_State) ->
+    FilteredErrors = lists:filter(fun({_Op, Count}) -> Count > 0 end, ets:tab2list(rcl_bench_total_errors)),
+    logger:warning("Notice: ~p", [FilteredErrors]).
