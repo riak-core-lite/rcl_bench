@@ -68,7 +68,7 @@ init([]) ->
 
     logger:notice("Operations: ~p", [Ops]),
     [erlang:put({csv_file, X}, op_csv_file(X, DriverMod)) || X <- Ops],
-    erlang:put(summary_file, op_summary_csv_file(DriverMod)),
+    erlang:put({csv_file, summary_file}, op_summary_csv_file(DriverMod)),
     {ok, #state{ops = Ops, report_interval = ReportInterval}}.
 
 handle_call({op, Op, {error, Reason}, _ElapsedUs}, _From, State) ->
@@ -120,7 +120,7 @@ handle_info(report, State) ->
                     end, {0,0,[]}, State#state.ops),
 
     %% Write summary
-    File = erlang:get(summary_file),
+    File = erlang:get({csv_file, summary_file}),
     file:write(File,
         io_lib:format("~w, ~w, ~w, ~w, ~w\n",
             [Elapsed,
@@ -132,10 +132,11 @@ handle_info(report, State) ->
     {noreply, State#state { last_write_time = Now }}.
 
 terminate(_Reason, State) ->
-    % one last time
+    % report one last time
     handle_info(report, State),
     report_total_errors(State),
 
+    % close files
     [ok = file:close(F) || {{csv_file, _}, F} <- erlang:get()],
     ok.
 
@@ -157,11 +158,11 @@ op_summary_csv_file(DriverMod) ->
 op_csv_file({Label, _Op}, DriverMod) ->
     {ok, TestDir2} = DriverMod:test_dir(),
     TestDir = filename:join(TestDir2, "current"),
-    Fname = filename:join(TestDir, rcl_bench_util:normalize_label(Label) ++ "_single.csv"),
+    Fname = filename:join(TestDir, rcl_bench_util:normalize_label(Label) ++ "_latencies.csv"),
     {ok, F} = file:open(Fname, [raw, binary, write]),
-    ok = file:write(F, <<"timestamp, unit, microseconds\n">>),
+    file:write(F, <<"elapsed, window, n, min, mean, median, 95th, 99th, 99_9th, max, errors\n">>),
     F.
 
 report_total_errors(_State) ->
     FilteredErrors = lists:filter(fun({_Op, Count}) -> Count > 0 end, ets:tab2list(rcl_bench_total_errors)),
-    logger:warning("Notice: ~p", [FilteredErrors]).
+    logger:warning("Errors: ~p", [FilteredErrors]).

@@ -18,7 +18,7 @@ start(_StartType, _StartArgs) ->
     {ok, DriverMod} = application:get_env(rcl_bench, driver_module),
     % spawn duration exit
     {ok, DurationMins} = DriverMod:duration(),
-    Duration = timer:minutes(DurationMins) + timer:seconds(1),
+    Duration = timer:minutes(DurationMins) + timer:seconds(1) -timer:seconds(45),
     spawn_link(fun () ->
                        receive
                            after Duration ->
