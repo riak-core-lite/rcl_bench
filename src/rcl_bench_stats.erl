@@ -66,13 +66,12 @@ init([]) ->
     %% Setup a histogram for each operation 
     %% we only track latencies on successful operations
     [begin
-        rcl_bench_histogram:new_histogram({latencies, Op}, slide, report_interval())
+        rcl_bench_histogram:new_histogram({latencies, Op}, report_interval())
     end || Op <- Ops],
 
     ReportInterval = timer:seconds(report_interval()),
     timer:send_interval(ReportInterval, report),
 
-    logger:notice("Operations: ~p", [Ops]),
     [erlang:put({csv_file, X}, op_csv_file(X, DriverMod)) || X <- Ops],
     erlang:put({csv_file, summary_file}, op_summary_csv_file(DriverMod)),
     {ok, #state{ops = Ops, report_interval = ReportInterval}}.
