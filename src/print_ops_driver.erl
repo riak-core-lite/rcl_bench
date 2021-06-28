@@ -19,8 +19,8 @@ duration() -> {ok, 1}.
 operations() ->
     {ok, [{put, 3}, 
           {get, 6},
-          {err, 2},
-          {cr, 2}]}.
+          {err, 2}
+          ]}.
 
 %% Base test output directory
 test_dir() -> {ok, "tests"}.
@@ -57,12 +57,12 @@ run(cr, KeyGen, _ValueGen, State) ->
     {ok, state};
 run(get, KeyGen, _ValueGen, State) ->
     % a fast operation
-    timer:sleep(10),
+    timer:sleep(round(rand:uniform()*1000)),
     io:format(user, "get~n", []),
     {ok, state};
 run(put, KeyGen, ValueGen, State) ->
     % a slow operation
-    timer:sleep(1000),
+    timer:sleep(round((rand:uniform()+rand:uniform())*1000)),
     io:format(user, "put~n", []),
     {ok, state}.
 
