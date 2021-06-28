@@ -6,7 +6,7 @@ function Usage {
   echo "                       [-P] [-E EXEC_COMMAND] [-h]" >&2
   echo "" >&2
   echo "    -d TEST_DIR:      comma separated test directories with *-latencies.csv" >&2
-  echo "                      default: \"tests/current\"" >&2
+  echo "                      default: \"current\"" >&2
   echo "    -o OPERATIONS:    operation prefixes of *-latencies.csv" >&2
   echo "                      in comma separated list" >&2
   echo "                      default: all operations under TEST_DIR" >&2
@@ -25,7 +25,7 @@ function Usage {
   exit 1
 }
 
-TEST_DIR="tests/current"
+TEST_DIR="current"
 OPERATIONS=
 STATS_KINDS="99th,mean"
 TERMINAL_COMMAND=

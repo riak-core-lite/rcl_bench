@@ -12,13 +12,16 @@
 
 mode() -> {ok, {rate, max}}.
 %% Number of concurrent workers
-concurrent_workers() -> {ok, 2}.
+concurrent_workers() -> {ok, 1}.
 %% Test duration (minutes)
 duration() -> {ok, 1}.
 %% Operations (and associated mix)
 operations() ->
-    {ok, [{put, 10}, 
-          {get, 2}]}.
+    {ok, [{put, 3}, 
+          {get, 6},
+          {err, 2},
+          {cr, 1}
+          ]}.
 
 %% Base test output directory
 test_dir() -> {ok, "tests"}.
@@ -42,14 +45,22 @@ shutdown_on_error() -> false.
 %% Benchmark implementation
 
 new(Id) ->
-    io:format(user, "init~n", []),
     {ok, state}.
 
+run(err, KeyGen, _ValueGen, State) ->
+    % you can return any error term you want
+    {error, {error, wanted}, State};
+run(cr, KeyGen, _ValueGen, State) ->
+    % this operation will crash and counts as an error for operation cr
+    % if the worker crahes too often, the benchmark will stop
+    1/0,
+    {ok, state};
 run(get, KeyGen, _ValueGen, State) ->
-    io:format(user, "get~n", []),
+    % a fast operation
     {ok, state};
 run(put, KeyGen, ValueGen, State) ->
-    io:format(user, "put~n", []),
+    % a slow operation
+    timer:sleep(round((rand:uniform())*1000)),
     {ok, state}.
 
 terminate(_, _) -> ok.

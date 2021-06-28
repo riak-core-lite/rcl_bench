@@ -6,7 +6,7 @@ function Usage {
   echo "                        [-P] [-E EXEC_COMMAND] [-h]" >&2
   echo "" >&2
   echo "    -d TEST_DIR:      comma separated test directories with summary.csv" >&2
-  echo "                      default: \"tests/current\"" >&2
+  echo "                      default: \"current\"" >&2
   echo "    -k SUMMARY_KINDS: summary kinds in comma separated list" >&2
   echo "                      default: \"total,failed\"" >&2
   echo "    -u UNIT:          unit of measurement" >&2
@@ -24,7 +24,7 @@ function Usage {
   exit 1
 }
 
-TEST_DIR=tests/current
+TEST_DIR=current
 SUMMARY_KINDS="total,failed"
 TERMINAL_COMMAND=
 PLOT_STYLE="linespoints pointsize 2 linewidth 1"
