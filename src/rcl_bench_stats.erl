@@ -49,8 +49,8 @@ init([]) ->
     %% the start of the run
     ets:new(rcl_bench_total_errors, [protected, named_table]),
 
+    ets:new(t, [set, named_table]),
 
-    T = ets:new(t, [set, named_table]),
 
     {ok, DriverMod} = application:get_env(rcl_bench, driver_module),
     {ok, Operations} = DriverMod:operations(),
@@ -62,6 +62,12 @@ init([]) ->
                 {Label, OpTag}
         end,
     Ops = [F1(X) || X <- Operations],
+
+    %% Setup a histogram for each operation 
+    %% we only track latencies on successful operations
+    [begin
+        rcl_bench_histogram:new_histogram({latencies, Op}, slide, report_interval())
+    end || Op <- Ops],
 
     ReportInterval = timer:seconds(report_interval()),
     timer:send_interval(ReportInterval, report),

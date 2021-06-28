@@ -62,7 +62,7 @@ get_values(#slide{window = Window, reservoir = Reservoir}) ->
     ets:select(Reservoir, [{{{'$1','_'},'$2'},[{'>=', '$1', Oldest}],['$2']}]).
 
 moment() ->
-    rcl_bench_utils:now_epoch().
+    rcl_bench_util:now_epoch().
 
 trim(Reservoir, Window) ->
     Oldest = moment() - Window,

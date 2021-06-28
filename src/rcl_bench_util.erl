@@ -1,7 +1,14 @@
 -module(rcl_bench_util).
 
 %% API
--export([user_friendly_bytes/1, exit/2, normalize_label/1]).
+-export([
+    user_friendly_bytes/1, 
+    exit/2, 
+    now_epoch/0,
+    now_epoch/1,
+    now_epoch_micro/0,
+    normalize_label/1
+]).
 
 %%
 %% Convert a number of bytes into a more user-friendly representation
@@ -46,3 +53,14 @@ replace_special_chars([_ | T]) ->
     [$- | replace_special_chars(T)];
 replace_special_chars([]) ->
     [].
+
+
+now_epoch() ->
+    now_epoch(os:timestamp()).
+
+now_epoch({Mega, Sec, _}) ->
+    (Mega * 1000000 + Sec).
+
+now_epoch_micro() ->
+    {Mega, Sec, Micro} = os:timestamp(),
+    (Mega * 1000000 + Sec) * 1000000 + Micro.
