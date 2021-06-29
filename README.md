@@ -3,6 +3,8 @@
 Simplification of `basho_bench` that can be used to benchmark total throughput and
 latencies of operations of any custom-defined workload.
 
+![image](https://user-images.githubusercontent.com/38429047/123804784-0947bb00-d8dd-11eb-888b-d5ac0a5d6b04.png)
+
 
 ## Generate Graphs
 
