@@ -118,9 +118,9 @@ new({uniform_int, StartKey, NumKeys}, _Id)
     fun () ->
             rand:uniform(NumKeys) + StartKey - 1
     end;
-%%new({pareto_int, MaxKey}, _Id)
-%%  when is_integer(MaxKey), MaxKey > 0 ->
-%%    pareto(trunc(MaxKey * 0.2), ?PARETO_SHAPE);
+new({pareto_int, MaxKey}, _Id)
+  when is_integer(MaxKey), MaxKey > 0 ->
+    pareto(trunc(MaxKey * 0.2), ?PARETO_SHAPE);
 %%new({dc_bias, NumDCs, DcId, NodesPerDC, MaxKey}, _Id) ->
 %%    Max = MaxKey * NodesPerDC,
 %%    bias(NumDCs, DcId, Max, trunc(Max * 0.2), ?PARETO_SHAPE);
@@ -176,15 +176,15 @@ dimension(Other) ->
 %% Internal functions
 %% ====================================================================
 
-%%pareto(Mean, Shape) ->
-%%    S1 = (-1 / Shape),
-%%    S2 = Mean * (Shape - 1),
-%%    fun() ->
-%%            U = 1 - rand:uniform(),
-%%            trunc((math:pow(U, S1) - 1) * S2)
-%%    end.
-%%
-%%
+pareto(Mean, Shape) ->
+    S1 = (-1 / Shape),
+    S2 = Mean * (Shape - 1),
+    fun() ->
+            U = 1 - rand:uniform(),
+            trunc((math:pow(U, S1) - 1) * S2)
+    end.
+
+
 %%bias(NumDCs, DcId, Max, Mean, Shape) ->
 %%    DcRange = (Max div NumDCs) * (1 - DcId),
 %%    S1 = (-1 / Shape),
